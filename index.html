@@ -1,0 +1,142 @@
+<doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GMOD</title>
+  <script src="opentype.js"></script>
+</head>
+<body>
+  <canvas id="canvas" width="800px" height="200px"></canvas>
+  <script>
+
+  function map(value, start1, stop1, start2, stop2) {
+      return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+  }
+
+  function VertexGroup(name, vertices, anchors) {
+    this.name = name;
+    this.vertices = vertices;
+    this.anchors = anchors
+  }
+
+  VertexGroup.prototype = {
+    // anchor is the stable point, align is the alignment point, (x,y) the alignment target
+    stretchTo: function (glyph, anchor, align, x, y) {
+      var refPoint = glyph.points[this.anchors[anchor]];
+      var rx = refPoint.x;
+      var ry = refPoint.y;
+      var targetPoint = glyph.points[this.anchors[align]];
+      var tx = targetPoint.x;
+      var ty = targetPoint.y;
+      this.vertices.forEach(function(i) {
+        var point = glyph.points[i];
+        point.x = map(point.x, rx, tx, rx, tx+x);
+        point.y = map(point.y, ry, ty, ry, ty+y);
+      });
+    }
+  };
+
+  var vgrp = {
+    "t": [
+      new VertexGroup("right crossbar", [8,9,10,11,12,13], { left: 8, right: 10 }),
+      new VertexGroup("left crossbar", [37,38,39,40,41,42,43,44,45,46,47,48,49,50,51], { left: 45, right: 51})
+    ]
+  }
+
+  var glyphs = [];
+
+  opentype.load('Tester.otf', function (err, font) {
+    if (err) {
+       console.error('Font could not be loaded: ' + err);
+    } else {
+      var ctx = document.getElementById('canvas').getContext('2d');
+
+      // Construct a Path object containing the letter shapes of the given text.
+      // The other parameters are x, y and fontSize.
+      // Note that y is the position of the baseline.
+      var tally = 0;      
+      var phrase = "the foxies trick tittilating chickens";// fountain"
+      var fontSize = 50;
+
+      phrase.split('').forEach(function(l) {
+        var g = window.copyGlyph(font.charToGlyph(l));
+        glyphs.push({
+          letter: l,
+          glyph: g,
+          x: tally,
+          y: 100
+        });
+        if(l.match(/^\s$/)) { tally += fontSize; }
+        else { tally += (g.advanceWidth) / (font.unitsPerEm / fontSize); }        
+      });
+
+      // dirtyhack the GMOD context
+      var left = [];
+      var right = [];
+      var lastt = false;
+
+      /**
+       * Run through all letters; boundary->letter should clear "last t"
+       */
+      glyphs.forEach(function(g) {
+
+        // space character: process right crossbars
+        if(g.letter.match(/^[kbdhlf\s]$/)) {
+
+          if(lastt) {
+            vgrp.t[0].stretchTo(lastt.glyph, "left", "right", (function() {
+              var s = 0;
+              right.forEach(function(l) {
+                s += l.glyph.xMax - l.glyph.xMin;
+              });
+              return s;
+            }()), 100);
+          }
+
+          // reset boundaries
+          left = [];
+          right = [];
+
+          // reset lastt
+          lastt = false;
+        }
+
+        
+        // 't' character: process left crossbars
+        else if(g.letter === "t") {
+
+          vgrp.t[1].stretchTo(g.glyph, "right", "left", (function() {
+            var s = 0;
+            left.forEach(function(l) {
+              s += l.glyph.xMax;
+            }); 
+            return -s;
+          }()), 0);
+
+          // reset boundaries
+          left = [];
+          right = [];
+
+          // bind lastt
+          lastt = g;
+        }
+
+        else {
+          left.push(g);
+          right.push(g);
+        }
+
+      });
+
+      glyphs.forEach(function(t) {
+        var g = t.glyph;
+        if(t.letter == "t") {
+          g.path = window.getGlyphPath(g.points);
+        }
+        g.draw(ctx, t.x, t.y, fontSize);
+      })
+    }
+  });
+  </script>
+</body>
+</html>
