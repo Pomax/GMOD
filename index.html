@@ -4,9 +4,33 @@
   <meta charset="utf-8">
   <title>GMOD</title>
   <script src="opentype.js"></script>
+  <style>
+    @font-face {
+      font-family: test;
+      src: url(Tester.otf) format(opentype);
+    }
+    * {
+      -moz-font-feature-settings: "liga=1, dlig=1";
+      -ms-font-feature-settings: "liga", "dlig";
+      -webkit-font-feature-settings: "liga", "dlig";
+      -o-font-feature-settings: "liga", "dlig";
+      font-feature-settings: "liga", "dlig";
+    }
+  </style>
 </head>
 <body>
-  <canvas id="canvas" width="800px" height="200px"></canvas>
+  <p id="sampletext"></p>
+  <script>
+    var phrase = "Don't let the foxes attack travis's chickens!"
+    var fontSize = 50;
+
+    var p = document.getElementById("sampletext");
+    p.textContent = phrase;
+    p.style.fontFamily = "test";
+    p.style.fontSize = fontSize + "px";
+  </script>
+
+  <canvas id="canvas" width="1200px" height="200px"></canvas>
   <script>
 
   function map(value, start1, stop1, start2, stop2) {
@@ -39,7 +63,7 @@
   var vgrp = {
     "t": [
       new VertexGroup("right crossbar", [8,9,10,11,12,13], { left: 8, right: 10 }),
-      new VertexGroup("left crossbar", [37,38,39,40,41,42,43,44,45,46,47,48,49,50,51], { left: 45, right: 51})
+      new VertexGroup("left crossbar", [38,39,40,41,42,43,44,45,46,47,48,49,50,51,52], { left: 46, right: 52})
     ]
   }
 
@@ -55,8 +79,6 @@
       // The other parameters are x, y and fontSize.
       // Note that y is the position of the baseline.
       var tally = 0;      
-      var phrase = "the foxies trick tittilating chickens";// fountain"
-      var fontSize = 50;
 
       phrase.split('').forEach(function(l) {
         var g = window.copyGlyph(font.charToGlyph(l));
@@ -66,7 +88,7 @@
           x: tally,
           y: 100
         });
-        if(l.match(/^\s$/)) { tally += fontSize; }
+        if(l.match(/^\s$/)) { tally += fontSize/2; }
         else { tally += (g.advanceWidth) / (font.unitsPerEm / fontSize); }        
       });
 
@@ -81,7 +103,7 @@
       glyphs.forEach(function(g) {
 
         // space character: process right crossbars
-        if(g.letter.match(/^[kbdhlf\s]$/)) {
+        if(g.letter.match(/^[A-Zkbdhlfv'"\s]$/)) {
 
           if(lastt) {
             vgrp.t[0].stretchTo(lastt.glyph, "left", "right", (function() {
